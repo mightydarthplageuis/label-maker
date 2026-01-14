@@ -5,6 +5,7 @@ import { setupPdfJsWorker } from './setupPdfJsWorker';
 function PdfCanvas({ pdfData, onCropComplete }) {
   const canvasRef = useRef(null);
   const [pdfPage, setPdfPage] = useState(null);
+  const [pageRotation, setPageRotation] = useState(0);
   const [cropRect, setCropRect] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
@@ -58,12 +59,13 @@ function PdfCanvas({ pdfData, onCropComplete }) {
   useEffect(() => {
     const loadPdf = async () => {
       try {
-        await setupPdfJsWorker(); // Ensure worker is ready
+        await setupPdfJsWorker();
         const dataForPdfJs = pdfData.slice(0);
         const loadingTask = pdfjsLib.getDocument({ data: dataForPdfJs });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         setPdfPage(page);
+        setPageRotation(page.rotate);
 
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
@@ -94,7 +96,8 @@ function PdfCanvas({ pdfData, onCropComplete }) {
       x: cropRect.x / renderScale,
       y: cropRect.y / renderScale,
       width: cropRect.width / renderScale,
-      height: cropRect.height / renderScale
+      height: cropRect.height / renderScale,
+      rotation: pageRotation
     };
 
     try {
@@ -118,10 +121,10 @@ function PdfCanvas({ pdfData, onCropComplete }) {
           <div
             className="crop-box"
             style={{
-              left: `${cropRect.x}px`,
-              top: `${cropRect.y}px`,
-              width: `${cropRect.width}px`,
-              height: `${cropRect.height}px`,
+              left: cropRect.x + 'px',
+              top: cropRect.y + 'px',
+              width: cropRect.width + 'px',
+              height: cropRect.height + 'px',
             }}
           />
         )}

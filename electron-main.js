@@ -1,10 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { PDFDocument, rgb } = require('pdf-lib');
+const { PDFDocument, degrees } = require('pdf-lib');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
-// Configure auto-updater - don't auto download, let user confirm first
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
@@ -45,7 +44,7 @@ app.whenReady().then(() => {
       const fileAge = now - stats.mtime.getTime();
 
       if (file.endsWith('.pdf') && fileAge > oneDay) {
-        console.log(`Deleting old label: ${file}`);
+        console.log('Deleting old label:', file);
         fs.unlinkSync(filePath);
       }
     });
@@ -53,37 +52,28 @@ app.whenReady().then(() => {
 
   mainWindow = createWindow();
 
-  // Check for updates (only in production)
   if (process.env.NODE_ENV !== 'development') {
     autoUpdater.checkForUpdates();
   }
 
-  // Auto-updater events
   autoUpdater.on('update-available', (info) => {
-    console.log('Update available:', info.version);
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Available',
-      message: `A new version (${info.version}) is available. Do you want to download and install it now?`,
+      message: 'A new version (' + info.version + ') is available. Download and install?',
       buttons: ['Yes, Update Now', 'Later'],
     }).then((result) => {
       if (result.response === 0) {
-        // User clicked "Yes, Update Now" - start download
         autoUpdater.downloadUpdate();
       }
     });
   });
 
-  autoUpdater.on('download-progress', (progress) => {
-    console.log(`Download progress: ${Math.round(progress.percent)}%`);
-  });
-
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('Update downloaded:', info.version);
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Ready',
-      message: 'Update downloaded. The app will now restart to install it.',
+      message: 'Update downloaded. The app will restart to install.',
       buttons: ['OK'],
     }).then(() => {
       autoUpdater.quitAndInstall();
@@ -92,11 +82,6 @@ app.whenReady().then(() => {
 
   autoUpdater.on('error', (error) => {
     console.error('Auto-updater error:', error);
-    dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      title: 'Update Error',
-      message: 'Failed to download update: ' + error.message,
-    });
   });
 
   app.on('activate', () => {
@@ -114,12 +99,10 @@ app.on('window-all-closed', () => {
 
 // --- IPC Handlers ---
 
-// Get app version
 ipcMain.handle('get-version', () => {
   return app.getVersion();
 });
 
-// Open file dialog and read PDF
 ipcMain.handle('open-pdf-file', async () => {
   try {
     const result = await dialog.showOpenDialog({
@@ -134,58 +117,74 @@ ipcMain.handle('open-pdf-file', async () => {
 
     const filePath = result.filePaths[0];
     const fileData = fs.readFileSync(filePath);
-    const uint8Array = new Uint8Array(fileData);
-    
-    console.log(`PDF file loaded: ${filePath}, Size: ${uint8Array.byteLength} bytes.`);
-    return uint8Array;
+    return new Uint8Array(fileData);
   } catch (error) {
-    console.error('File open error:', error.message);
     return { error: error.message };
   }
 });
 
-// Handle PDF download from URL
 ipcMain.handle('download-pdf', async (event, url) => {
-  console.log(`Downloading PDF from: ${url}`);
   try {
     const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to download file: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error('Failed to download: ' + response.statusText);
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/pdf')) {
-      console.warn(`Invalid content type: ${contentType}`);
-      throw new Error('The downloaded file is not a PDF.');
+      throw new Error('The file is not a PDF.');
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    console.log(`PDF download successful. Size: ${uint8Array.byteLength} bytes.`);
-    return uint8Array;
+    return new Uint8Array(arrayBuffer);
   } catch (error) {
-    console.error('Download error:', error.message);
     return { error: error.message };
   }
 });
 
 ipcMain.handle('crop-and-save-pdf', async (event, pdfData, cropRect) => {
-  console.log('Received crop request with rect:', cropRect);
+  console.log('Crop request:', cropRect);
   try {
     const pdfDoc = await PDFDocument.load(pdfData);
     const page = pdfDoc.getPages()[0];
-
     const { width, height } = page.getSize();
-    const x = cropRect.x;
-    const y = height - cropRect.y - cropRect.height;
-    const newWidth = cropRect.width;
-    const newHeight = cropRect.height;
+    const rotation = page.getRotation().angle;
 
-    console.log(`Original page size: ${width}x${height}`);
-    console.log(`Applying crop box: x=${x}, y=${y}, width=${newWidth}, height=${newHeight}`);
+    console.log('Page: ' + width + 'x' + height + ', rotation: ' + rotation);
 
-    page.setCropBox(x, y, newWidth, newHeight);
-    page.setMediaBox(x, y, newWidth, newHeight);
+    let pdfX, pdfY, pdfWidth, pdfHeight;
+
+    // Transform visual coordinates to PDF coordinates based on rotation
+    if (rotation === 0) {
+      pdfX = cropRect.x;
+      pdfY = height - cropRect.y - cropRect.height;
+      pdfWidth = cropRect.width;
+      pdfHeight = cropRect.height;
+    } else if (rotation === 90) {
+      pdfX = cropRect.y;
+      pdfY = cropRect.x;
+      pdfWidth = cropRect.height;
+      pdfHeight = cropRect.width;
+    } else if (rotation === 180) {
+      pdfX = width - cropRect.x - cropRect.width;
+      pdfY = cropRect.y;
+      pdfWidth = cropRect.width;
+      pdfHeight = cropRect.height;
+    } else if (rotation === 270) {
+      pdfX = height - cropRect.y - cropRect.height;
+      pdfY = width - cropRect.x - cropRect.width;
+      pdfWidth = cropRect.height;
+      pdfHeight = cropRect.width;
+    } else {
+      pdfX = cropRect.x;
+      pdfY = height - cropRect.y - cropRect.height;
+      pdfWidth = cropRect.width;
+      pdfHeight = cropRect.height;
+    }
+
+    console.log('Crop coords: x=' + pdfX + ', y=' + pdfY + ', w=' + pdfWidth + ', h=' + pdfHeight);
+
+    page.setCropBox(pdfX, pdfY, pdfWidth, pdfHeight);
+    page.setMediaBox(pdfX, pdfY, pdfWidth, pdfHeight);
+    page.setRotation(degrees(0));
 
     const pdfBytes = await pdfDoc.save();
 
@@ -195,14 +194,13 @@ ipcMain.handle('crop-and-save-pdf', async (event, pdfData, cropRect) => {
     if (!fs.existsSync(labelDir)) {
       fs.mkdirSync(labelDir, { recursive: true });
     }
-    const timestamp = new Date().getTime();
-    const filePath = path.join(labelDir, `cropped-label-${timestamp}.pdf`);
+    const filePath = path.join(labelDir, 'cropped-label-' + Date.now() + '.pdf');
 
     fs.writeFileSync(filePath, pdfBytes);
-    console.log(`Cropped PDF saved to: ${filePath}`);
+    console.log('Saved to:', filePath);
     return { success: true, path: filePath, data: pdfBytes };
   } catch (error) {
-    console.error('Cropping error:', error.message);
+    console.error('Crop error:', error.message);
     return { error: error.message };
   }
 });
@@ -210,26 +208,20 @@ ipcMain.handle('crop-and-save-pdf', async (event, pdfData, cropRect) => {
 ipcMain.handle('print-pdf', async (event, pdfData) => {
   try {
     const pdfBase64 = Buffer.from(pdfData).toString('base64');
-    const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
+    const dataUrl = 'data:application/pdf;base64,' + pdfBase64;
 
     const printWindow = new BrowserWindow({ show: false });
-
     await printWindow.loadURL(dataUrl);
 
     setTimeout(() => {
-      printWindow.webContents.print({}, (success, failureReason) => {
-        if (!success) {
-          console.error('Printing failed:', failureReason);
-        } else {
-          console.log('Print dialog opened successfully.');
-        }
+      printWindow.webContents.print({}, (success, reason) => {
+        if (!success) console.error('Print failed:', reason);
         printWindow.close();
       });
     }, 1000);
 
     return { success: true };
   } catch (error) {
-    console.error('Printing error:', error.message);
     return { error: error.message };
   }
 });
