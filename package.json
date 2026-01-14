@@ -1,0 +1,40 @@
+{
+  "name": "label-maker",
+  "version": "1.0.0",
+  "description": "A simple application to crop PDF labels.",
+  "main": "electron-main.js",
+  "scripts": {
+    "dev": "concurrently \"npm:dev --prefix frontend\" \"cross-env NODE_ENV=development electron .\"",
+    "package": "npm run build --prefix frontend && electron-builder"
+  },
+  "build": {
+    "appId": "com.electron.label-cropper",
+    "productName": "Label Cropper",
+    "asarUnpack": [
+      "**/pdf.worker.min.mjs"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "frontend/dist/**/*"
+    ],
+    "win": {
+      "icon": "08813a7d-a905-40e9-b3bc-f1ca0fc20823.ico"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}

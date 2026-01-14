@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b)",
+      "Bash(git --version:*)",
+      "Bash(gh:*)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" --version)",
+      "Bash(\"C:/Program Files \\(x86\\)/GitHub CLI/gh.exe\" --version)",
+      "Bash(\"$LOCALAPPDATA/Programs/GitHub CLI/gh.exe\" --version)",
+      "Bash(if [ -f \"C:/Program Files/GitHub CLI/gh.exe\" ])",
+      "Bash(then echo \"C:/Program Files/GitHub CLI/gh.exe\")",
+      "Bash(elif [ -f \"C:/Program Files \\(x86\\)/GitHub CLI/gh.exe\" ])",
+      "Bash(then echo \"C:/Program Files \\(x86\\)/GitHub CLI/gh.exe\")",
+      "Bash(else echo \"$LOCALAPPDATA/Programs/GitHub CLI/gh.exe\")",
+      "Bash(fi)",
+      "Bash(git init:*)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" repo create label-maker --public --source=\"C:/Users/adamz/Desktop/label maker\" --description \"Desktop app for cropping PDF labels\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
