@@ -152,28 +152,36 @@ ipcMain.handle('crop-and-save-pdf', async (event, pdfData, cropRect) => {
 
     let pdfX, pdfY, pdfWidth, pdfHeight;
 
-    // Transform visual coordinates to PDF coordinates based on rotation
+    // Transform visual coordinates to PDF internal coordinates based on rotation
+    // Visual coordinates come from canvas (origin top-left)
+    // PDF coordinates use origin bottom-left
     if (rotation === 0) {
+      // No rotation - just flip Y axis
       pdfX = cropRect.x;
       pdfY = height - cropRect.y - cropRect.height;
       pdfWidth = cropRect.width;
       pdfHeight = cropRect.height;
     } else if (rotation === 90) {
+      // 90° clockwise: visual X -> PDF Y, visual Y -> PDF (width - X)
       pdfX = cropRect.y;
-      pdfY = cropRect.x;
+      pdfY = height - cropRect.x - cropRect.width;
       pdfWidth = cropRect.height;
       pdfHeight = cropRect.width;
     } else if (rotation === 180) {
+      // 180°: flip both axes
       pdfX = width - cropRect.x - cropRect.width;
       pdfY = cropRect.y;
       pdfWidth = cropRect.width;
       pdfHeight = cropRect.height;
     } else if (rotation === 270) {
-      pdfX = height - cropRect.y - cropRect.height;
-      pdfY = width - cropRect.x - cropRect.width;
+      // 270° clockwise: visual Y -> PDF (width - X), visual X -> PDF Y
+      // Visual dimensions are swapped: visual width = PDF height, visual height = PDF width
+      pdfX = width - cropRect.y - cropRect.height;
+      pdfY = cropRect.x;
       pdfWidth = cropRect.height;
       pdfHeight = cropRect.width;
     } else {
+      // Fallback
       pdfX = cropRect.x;
       pdfY = height - cropRect.y - cropRect.height;
       pdfWidth = cropRect.width;
