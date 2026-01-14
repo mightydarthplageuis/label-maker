@@ -100,6 +100,37 @@ app.on('window-all-closed', () => {
 
 // --- IPC Handlers ---
 
+// Get app version
+ipcMain.handle('get-version', () => {
+  return app.getVersion();
+});
+
+// Open file dialog and read PDF
+ipcMain.handle('open-pdf-file', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      title: 'Select PDF File',
+      filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+      properties: ['openFile'],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    const fileData = fs.readFileSync(filePath);
+    const uint8Array = new Uint8Array(fileData);
+    
+    console.log(`PDF file loaded: ${filePath}, Size: ${uint8Array.byteLength} bytes.`);
+    return uint8Array;
+  } catch (error) {
+    console.error('File open error:', error.message);
+    return { error: error.message };
+  }
+});
+
+// Handle PDF download from URL
 ipcMain.handle('download-pdf', async (event, url) => {
   console.log(`Downloading PDF from: ${url}`);
   try {

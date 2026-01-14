@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PdfCanvas from './PdfCanvas';
 import CroppedPreview from './CroppedPreview';
 
 function App() {
   const [pdfUrl, setPdfUrl] = useState('');
   const [pdfData, setPdfData] = useState(null);
-  const [croppedPdf, setCroppedPdf] = useState(null); // State for the cropped PDF result
+  const [croppedPdf, setCroppedPdf] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [version, setVersion] = useState('');
+
+  useEffect(() => {
+    window.electron.getVersion().then((v) => setVersion(v));
+  }, []);
 
   const handleDownload = async () => {
     if (!pdfUrl) {
@@ -17,7 +22,7 @@ function App() {
     setError('');
     setLoading(true);
     setPdfData(null);
-    setCroppedPdf(null); // Reset cropped view on new download
+    setCroppedPdf(null);
 
     try {
       const result = await window.electron.downloadPdf(pdfUrl);
@@ -26,7 +31,30 @@ function App() {
       }
       setPdfData(result);
     } catch (err) {
-      setError(`Failed to download PDF: ${err.message}`);
+      setError('Failed to download PDF: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenFile = async () => {
+    setError('');
+    setLoading(true);
+    setPdfData(null);
+    setCroppedPdf(null);
+
+    try {
+      const result = await window.electron.openPdfFile();
+      if (result.canceled) {
+        setLoading(false);
+        return;
+      }
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      setPdfData(result);
+    } catch (err) {
+      setError('Failed to open PDF: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -35,10 +63,9 @@ function App() {
   const handleCropComplete = (result) => {
     if (result.success) {
       setCroppedPdf(result);
-      // Hide the original cropper UI
-      setPdfData(null); 
+      setPdfData(null);
     } else {
-      alert(`Cropping failed: ${result.error || 'An unknown error occurred.'}`);
+      alert('Cropping failed: ' + (result.error || 'An unknown error occurred.'));
     }
   };
 
@@ -50,7 +77,7 @@ function App() {
           throw new Error(result.error || 'Unknown printing error');
         }
       } catch (err) {
-        alert(`Failed to print: ${err.message}`);
+        alert('Failed to print: ' + err.message);
       }
     }
   };
@@ -58,6 +85,8 @@ function App() {
   return (
     <div className="container">
       <h1>PDF Label Cropper</h1>
+      <p className="version">Version {version}</p>
+
       <div className="input-group">
         <input
           type="text"
@@ -67,14 +96,22 @@ function App() {
           disabled={loading}
         />
         <button onClick={handleDownload} disabled={loading}>
-          {loading ? 'Downloading...' : 'Load PDF'}
+          {loading ? 'Loading...' : 'Load URL'}
         </button>
       </div>
+
+      <div className="divider">
+        <span>or</span>
+      </div>
+
+      <button className="file-button" onClick={handleOpenFile} disabled={loading}>
+        Load PDF from File
+      </button>
 
       {error && <p className="error">{error}</p>}
 
       {pdfData && <PdfCanvas pdfData={pdfData} onCropComplete={handleCropComplete} />}
-      
+
       {croppedPdf && <CroppedPreview croppedPdf={croppedPdf} onPrint={handlePrint} />}
     </div>
   );
