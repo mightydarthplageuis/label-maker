@@ -17,7 +17,8 @@
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" auth status)",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" repo create label-maker --public --source=\"C:/Users/adamz/Desktop/label maker\" --description \"Desktop app for cropping PDF labels\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
