@@ -4,9 +4,11 @@ const { PDFDocument, rgb } = require('pdf-lib');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
-// Configure auto-updater
-autoUpdater.autoDownload = true;
+// Configure auto-updater - don't auto download, let user confirm first
+autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+
+let mainWindow = null;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -26,7 +28,6 @@ function createWindow() {
     win.loadFile(path.join(__dirname, 'frontend/dist/index.html'));
   }
 
-  win.webContents.openDevTools();
   return win;
 }
 
@@ -50,11 +51,11 @@ app.whenReady().then(() => {
     });
   }
 
-  const mainWindow = createWindow();
+  mainWindow = createWindow();
 
   // Check for updates (only in production)
   if (process.env.NODE_ENV !== 'development') {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
   }
 
   // Auto-updater events
@@ -63,8 +64,18 @@ app.whenReady().then(() => {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Available',
-      message: `A new version (${info.version}) is available. It will be downloaded in the background.`,
+      message: `A new version (${info.version}) is available. Do you want to download and install it now?`,
+      buttons: ['Yes, Update Now', 'Later'],
+    }).then((result) => {
+      if (result.response === 0) {
+        // User clicked "Yes, Update Now" - start download
+        autoUpdater.downloadUpdate();
+      }
     });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`Download progress: ${Math.round(progress.percent)}%`);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
@@ -72,17 +83,20 @@ app.whenReady().then(() => {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Ready',
-      message: 'A new version has been downloaded. Restart the app to apply the update.',
-      buttons: ['Restart Now', 'Later'],
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
+      message: 'Update downloaded. The app will now restart to install it.',
+      buttons: ['OK'],
+    }).then(() => {
+      autoUpdater.quitAndInstall();
     });
   });
 
   autoUpdater.on('error', (error) => {
     console.error('Auto-updater error:', error);
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Update Error',
+      message: 'Failed to download update: ' + error.message,
+    });
   });
 
   app.on('activate', () => {

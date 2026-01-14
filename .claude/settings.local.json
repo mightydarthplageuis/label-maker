@@ -23,7 +23,8 @@
       "Bash(npm run package:*)",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release create v1.0.0 \"C:/Users/adamz/Desktop/label maker/dist/Label Cropper Setup 1.0.0.exe\" --title \"v1.0.0 - Initial Release\" --notes \"Initial release with auto-update support.\")",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release upload v1.0.0 \"C:/Users/adamz/Desktop/label maker/dist/latest.yml\" \"C:/Users/adamz/Desktop/label maker/dist/Label Cropper Setup 1.0.0.exe.blockmap\")",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release create:*)"
     ]
   }
 }
