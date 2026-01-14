@@ -1,0 +1,56 @@
+===========================================
+LABEL CROPPER - User Guide
+===========================================
+
+WHAT THIS APP DOES
+------------------
+Crop shipping labels from PDF files and print them.
+Works with both normal and rotated PDF formats.
+
+
+HOW TO USE
+----------
+
+1. LOAD A PDF
+   - Option A: Paste a direct PDF URL and click "Load URL"
+   - Option B: Click "Load PDF from File" to select a local PDF
+
+2. SELECT CROP AREA
+   - Click and drag on the PDF preview to draw a rectangle
+   - The blue dashed box shows your selection
+
+3. CROP & SAVE
+   - Click "Crop & Save PDF" button
+   - The cropped PDF is automatically saved
+
+4. PRINT (Optional)
+   - After cropping, click "Print" to open print dialog
+   - Print the cropped label
+
+
+WHERE ARE CROPPED FILES SAVED?
+------------------------------
+%APPDATA%\Label Cropper\label\
+
+Files older than 24 hours are automatically deleted.
+
+
+AUTO-UPDATES
+------------
+The app checks for updates on startup.
+When available, you'll see a prompt to download and install.
+
+
+VERSION
+-------
+Current version is displayed below the app title.
+
+
+TIPS
+----
+- For best results, crop slightly inside the label borders
+- Both portrait and landscape PDFs are supported
+- The app handles rotated PDFs automatically
+
+
+===========================================

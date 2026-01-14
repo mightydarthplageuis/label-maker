@@ -1,6 +1,6 @@
 {
   "name": "label-maker",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A simple application to crop PDF labels.",
   "main": "electron-main.js",
   "scripts": {
