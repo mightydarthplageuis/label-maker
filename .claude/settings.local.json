@@ -26,7 +26,8 @@
       "Bash(node -e:*)",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release create:*)",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release view v1.3.0 --json assets --jq \".assets[].name\")",
-      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release delete v1.3.0 --yes)"
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" release delete v1.3.0 --yes)",
+      "Bash(ls:*)"
     ]
   }
 }

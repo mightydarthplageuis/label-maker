@@ -25,7 +25,7 @@
       "icon": "08813a7d-a905-40e9-b3bc-f1ca0fc20823.ico"
     },
     "nsis": {
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "Label-Cropper-Setup-${version}.${ext}"
     },
     "publish": {
       "provider": "github",
