@@ -2,6 +2,11 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { PDFDocument, rgb } = require('pdf-lib');
 const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
+
+// Configure auto-updater
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -14,28 +19,24 @@ function createWindow() {
     },
   });
 
-  // In development, load from Vite dev server.
-  // In production, load the built HTML file.
   if (process.env.NODE_ENV === 'development') {
     win.loadURL('http://localhost:5173');
-    // Open the DevTools.
     win.webContents.openDevTools();
   } else {
     win.loadFile(path.join(__dirname, 'frontend/dist/index.html'));
   }
 
-  // Open the DevTools.
   win.webContents.openDevTools();
+  return win;
 }
 
 app.whenReady().then(() => {
-  // Clean up old cropped labels
   const userDataPath = app.getPath('userData');
   const labelDir = path.join(userDataPath, 'label');
   if (fs.existsSync(labelDir)) {
     const files = fs.readdirSync(labelDir);
     const now = new Date().getTime();
-    const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    const oneDay = 24 * 60 * 60 * 1000;
 
     files.forEach(file => {
       const filePath = path.join(labelDir, file);
@@ -48,7 +49,41 @@ app.whenReady().then(() => {
       }
     });
   }
-  createWindow();
+
+  const mainWindow = createWindow();
+
+  // Check for updates (only in production)
+  if (process.env.NODE_ENV !== 'development') {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
+
+  // Auto-updater events
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version);
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Available',
+      message: `A new version (${info.version}) is available. It will be downloaded in the background.`,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version);
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version has been downloaded. Restart the app to apply the update.',
+      buttons: ['Restart Now', 'Later'],
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (error) => {
+    console.error('Auto-updater error:', error);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -65,7 +100,6 @@ app.on('window-all-closed', () => {
 
 // --- IPC Handlers ---
 
-// Handle PDF download
 ipcMain.handle('download-pdf', async (event, url) => {
   console.log(`Downloading PDF from: ${url}`);
   try {
@@ -90,47 +124,37 @@ ipcMain.handle('download-pdf', async (event, url) => {
   }
 });
 
-// Handle PDF cropping and saving
 ipcMain.handle('crop-and-save-pdf', async (event, pdfData, cropRect) => {
   console.log('Received crop request with rect:', cropRect);
   try {
     const pdfDoc = await PDFDocument.load(pdfData);
-    const page = pdfDoc.getPages()[0]; // Only process the first page
+    const page = pdfDoc.getPages()[0];
 
-    // pdf-lib's coordinate system has the origin at the bottom-left corner.
-    // The incoming cropRect from the UI has the origin at the top-left.
-    // We need to convert the y-coordinate.
     const { width, height } = page.getSize();
     const x = cropRect.x;
-    const y = height - cropRect.y - cropRect.height; // Convert y-origin
+    const y = height - cropRect.y - cropRect.height;
     const newWidth = cropRect.width;
     const newHeight = cropRect.height;
-    
+
     console.log(`Original page size: ${width}x${height}`);
     console.log(`Applying crop box: x=${x}, y=${y}, width=${newWidth}, height=${newHeight}`);
 
     page.setCropBox(x, y, newWidth, newHeight);
-    
-    // Some viewers might ignore CropBox, so we can also set MediaBox.
-    // This makes the crop "permanent" for most viewers.
     page.setMediaBox(x, y, newWidth, newHeight);
 
     const pdfBytes = await pdfDoc.save();
 
-    // Auto-save the file to the 'label' directory with a unique name
     const userDataPath = app.getPath('userData');
     const labelDir = path.join(userDataPath, 'label');
 
-    // Create the 'label' directory if it doesn't exist
     if (!fs.existsSync(labelDir)) {
       fs.mkdirSync(labelDir, { recursive: true });
     }
     const timestamp = new Date().getTime();
     const filePath = path.join(labelDir, `cropped-label-${timestamp}.pdf`);
-    
+
     fs.writeFileSync(filePath, pdfBytes);
     console.log(`Cropped PDF saved to: ${filePath}`);
-    // Return the path AND the data for the frontend to use
     return { success: true, path: filePath, data: pdfBytes };
   } catch (error) {
     console.error('Cropping error:', error.message);
@@ -138,18 +162,15 @@ ipcMain.handle('crop-and-save-pdf', async (event, pdfData, cropRect) => {
   }
 });
 
-// Handle PDF Printing
 ipcMain.handle('print-pdf', async (event, pdfData) => {
   try {
     const pdfBase64 = Buffer.from(pdfData).toString('base64');
     const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
 
-    // Create a new, hidden window
     const printWindow = new BrowserWindow({ show: false });
 
     await printWindow.loadURL(dataUrl);
 
-    // Wait a moment for the PDF viewer to load before printing
     setTimeout(() => {
       printWindow.webContents.print({}, (success, failureReason) => {
         if (!success) {
@@ -157,7 +178,6 @@ ipcMain.handle('print-pdf', async (event, pdfData) => {
         } else {
           console.log('Print dialog opened successfully.');
         }
-        // Clean up the hidden window
         printWindow.close();
       });
     }, 1000);

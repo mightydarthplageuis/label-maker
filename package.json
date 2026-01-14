@@ -23,6 +23,11 @@
     ],
     "win": {
       "icon": "08813a7d-a905-40e9-b3bc-f1ca0fc20823.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "mightydarthplageuis",
+      "repo": "label-maker"
     }
   },
   "keywords": [],
@@ -35,6 +40,7 @@
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
+    "electron-updater": "^6.7.3",
     "pdf-lib": "^1.17.1"
   }
 }
